@@ -1,13 +1,15 @@
+-- Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
+-- Player and Character
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local mouse = player:GetMouse()
 
--- Constants for shooting mechanics
+-- Constants for Features
 local LOW_ARC_HEIGHT = 50
 local HIGH_ARC_HEIGHT = 90
 local SHOOT_POWER_VALUES = {85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30}
@@ -16,7 +18,71 @@ local SHOOT_RANGE = 85
 local EXTRA_RANGE = 10
 local DEFAULT_WALKSPEED = 16
 
--- Function to set walk speed
+-- Ensure the script only runs in Hoopz
+local function isHoopz()
+    return game.PlaceId == 6938803436 -- Replace with the correct PlaceId for Hoopz [CHRISTMAS🎄]
+end
+
+if not isHoopz() then
+    warn("This script only works in Hoopz.")
+    return
+end
+
+-- Initialize GUI Library
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/soulsontopdang/passion/main/init.lua"))()
+local mainWindow = lib:CreateWindow("Hoopz Enhancements")
+
+-- Utility Functions
+local function fpsBoost()
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    game:GetService("Lighting").GlobalShadows = false
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v:IsDescendantOf(Workspace.CurrentCamera) then
+            v.CastShadow = false
+        end
+    end
+    print("FPS Boost enabled.")
+end
+
+local function selfPass()
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid:MoveTo(character.HumanoidRootPart.Position + Vector3.new(0, -2, 0))
+    end
+end
+
+local function enableInvisibility()
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") or part:IsA("Decal") then
+            part.Transparency = 1
+        end
+    end
+    print("Invisibility enabled.")
+end
+
+local function applyKorbloxLeg()
+    local rightLeg = character:FindFirstChild("RightLeg") or character:FindFirstChild("RightUpperLeg")
+    if rightLeg then
+        rightLeg:Destroy()
+        local fakeLeg = Instance.new("Part", character)
+        fakeLeg.Size = Vector3.new(1, 2, 1)
+        fakeLeg.BrickColor = BrickColor.new("Really black")
+        fakeLeg.Material = Enum.Material.SmoothPlastic
+        fakeLeg.Name = "KorbloxLeg"
+        print("Korblox leg applied.")
+    end
+end
+
+local function applyLongLegs()
+    for _, leg in pairs({"LeftLeg", "RightLeg", "LeftUpperLeg", "RightUpperLeg"}) do
+        local part = character:FindFirstChild(leg)
+        if part then
+            part.Size = part.Size + Vector3.new(0, 3, 0)
+        end
+    end
+    print("Long legs applied.")
+end
+
 local function setWalkSpeed(value)
     local humanoid = character:FindFirstChild("Humanoid")
     if humanoid then
@@ -24,74 +90,68 @@ local function setWalkSpeed(value)
     end
 end
 
--- Function to get rim position dynamically
-local function getRimPosition()
-    local hoop = workspace:FindFirstChild("Hoop") -- Replace "Hoop" with the actual rim object name
-    if hoop and hoop:IsA("BasePart") then
-        return hoop.Position
-    end
-    return nil
-end
-
--- Function to adjust aim and shoot
 local function adjustAimAndShoot(rimPosition)
     local distance = (character.HumanoidRootPart.Position - rimPosition).Magnitude
     if distance <= SHOOT_RANGE then
         local arcHeight = LOW_ARC_HEIGHT + (distance / SHOOT_RANGE) * (HIGH_ARC_HEIGHT - LOW_ARC_HEIGHT)
         local shootPower = math.clamp(SHOOT_POWER_VALUES[math.floor(distance / 10)], MIN_SHOOT_POWER, 100)
-
-        -- Auto-shoot logic placeholder
-        print("Shooting with power: " .. shootPower .. ", arc height: " .. arcHeight)
+        print("Shooting with power:", shootPower)
+        -- Implement shooting logic here
     end
 end
 
--- GUI Library Setup (replace `LibraryName` with your actual library, e.g., Rayfield)
-local lib = loadstring(game:HttpGet("https://github.com/soulsontopdang/passion/blob/main/Passionhub"))() -- Replace with the correct URL or method for loading your GUI library
-local window = lib:CreateWindow("Hoopz Enhancements")
-
 -- Main Tab
-local mainTab = window:CreateTab("Main")
+local mainTab = mainWindow:CreateTab("Main")
 
 -- Aimbots Section
-local aimbotsSection = mainTab:CreateSection("Aimbots")
-local lowArcToggle, highArcToggle
-local lowArcConnection, highArcConnection
-
-lowArcToggle = aimbotsSection:CreateToggle("Low Arc Aimbot", false, function(state)
+local aimbotSection = mainTab:CreateSection("Aimbots")
+aimbotSection:CreateToggle("Low Arc Aimbot", function(state)
     if state then
-        lowArcConnection = RunService.RenderStepped:Connect(function()
-            local rimPosition = getRimPosition()
-            if rimPosition and (character.HumanoidRootPart.Position - rimPosition).Magnitude <= SHOOT_RANGE then
+        RunService.RenderStepped:Connect(function()
+            local rimPosition = Vector3.new(0, 10, 0) -- Replace with the actual rim position
+            if (character.HumanoidRootPart.Position - rimPosition).Magnitude <= SHOOT_RANGE then
                 adjustAimAndShoot(rimPosition)
             end
         end)
-    elseif lowArcConnection then
-        lowArcConnection:Disconnect()
-        lowArcConnection = nil
     end
 end)
 
-highArcToggle = aimbotsSection:CreateToggle("High Arc Aimbot", false, function(state)
-    if state then
-        highArcConnection = RunService.RenderStepped:Connect(function()
-            local rimPosition = getRimPosition()
-            if rimPosition and (character.HumanoidRootPart.Position - rimPosition).Magnitude <= SHOOT_RANGE then
-                adjustAimAndShoot(rimPosition)
-            end
-        end)
-    elseif highArcConnection then
-        highArcConnection:Disconnect()
-        highArcConnection = nil
-    end
-end)
-
--- Walkspeed Section
-local walkspeedSection = mainTab:CreateSection("Walkspeed")
+-- WalkSpeed Section
+local walkspeedSection = mainTab:CreateSection("WalkSpeed")
 walkspeedSection:CreateSlider("WalkSpeed", DEFAULT_WALKSPEED, 16, 30, function(value)
     setWalkSpeed(value)
 end)
 
--- Other Features Sections
--- Add other sections here, such as FPS Boost, Invisibility, etc., following the same structure.
+-- Features Section
+local featuresSection = mainTab:CreateSection("Client-Sided Features")
+featuresSection:CreateToggle("Invisible", function(state)
+    if state then enableInvisibility() end
+end)
 
-print("Hoopz Enhancements GUI loaded!")
+featuresSection:CreateToggle("Korblox Leg", function(state)
+    if state then applyKorbloxLeg() end
+end)
+
+featuresSection:CreateToggle("Long Legs", function(state)
+    if state then applyLongLegs() end
+end)
+
+-- Performance Section
+local performanceSection = mainTab:CreateSection("Performance")
+performanceSection:CreateToggle("FPS Boost", function(state)
+    if state then fpsBoost() end
+end)
+
+-- Self Pass Section
+local selfPassSection = mainTab:CreateSection("Self Pass")
+selfPassSection:CreateToggle("Self Pass (Keybind: X)", function(state)
+    if state then
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if input.KeyCode == Enum.KeyCode.X and not gameProcessed then
+                selfPass()
+            end
+        end)
+    end
+end)
+
+print("Hoopz Enhancements GUI loaded successfully!")
